@@ -18,7 +18,7 @@ import org.rmj.appdriver.agentfx.ShowMessageFX;
 import org.rmj.appdriver.agentfx.ui.showFXDialog;
 import org.rmj.appdriver.constants.TransactionStatus;
 import org.rmj.appdriver.constants.UserRight;
-import org.rmj.cas.inventory.base.InventoryTrans;
+import org.rmj.engr.inventory.base.InventoryTrans;
 import org.engr.purchasing.pojo.UnitPOReceivingDetail;
 import org.engr.purchasing.pojo.UnitPOReceivingDetailOthers;
 import org.engr.purchasing.pojo.UnitPOReceivingMaster;
@@ -126,7 +126,7 @@ public class POReceiving implements GTransaction{
         }
         
         //validate detail if PO exists
-        if (!isItemsHasPO(loNewEnt.getSourceNo())) return loResult;
+        //if (!isItemsHasPO(loNewEnt.getSourceNo())) return loResult;
         
         if (!pbWithParent) poGRider.beginTrans();
         
