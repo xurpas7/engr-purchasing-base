@@ -19,9 +19,11 @@ import org.rmj.appdriver.agentfx.ui.showFXDialog;
 import org.rmj.appdriver.constants.TransactionStatus;
 import org.rmj.appdriver.constants.UserRight;
 import org.rmj.engr.inventory.base.InventoryTrans;
+import org.rmj.engr.inventory.base.Inventory;
 import org.engr.purchasing.pojo.UnitPOReceivingDetail;
 import org.engr.purchasing.pojo.UnitPOReceivingDetailOthers;
 import org.engr.purchasing.pojo.UnitPOReceivingMaster;
+import org.rmj.appdriver.agentfx.CommonUtils;
 
 public class POReceiving implements GTransaction{
     @Override
@@ -113,13 +115,10 @@ public class POReceiving implements GTransaction{
             return loResult;
         }
         
-        //delete the last detail if no stock id
-        if (poDetail.get(ItemCount()-1).getStockID().isEmpty()){
-            poDetail.remove(ItemCount() - 1);
-            paDetailOthers.remove(ItemCount() - 1);
+        if (System.getProperty("store.inventory.strict.type").equals("1")){
+            if (poDetail.get(ItemCount()-1).getStockID().equals("")) deleteDetail(ItemCount() -1);
         }
         
-        //check if transaction has detail
         if (ItemCount() <= 0){
             setMessage("Unable to save no item record.");
             return loResult;
@@ -494,8 +493,8 @@ public class POReceiving implements GTransaction{
             paDetailOthers.add(new UnitPOReceivingDetailOthers());
         }else{
             if ((!poDetail.get(ItemCount()-1).getStockID().equals("") ||
-                !paDetailOthers.get(ItemCount()-1).getValue(101).equals("")) &&
-                    poDetail.get(ItemCount() -1).getQuantity()!= 0){
+                !paDetailOthers.get(ItemCount()-1).getValue(10).equals("")) &&
+                poDetail.get(ItemCount() -1).getQuantity()!= 0){
                 poDetail.add(new UnitPOReceivingDetail());
                 paDetailOthers.add(new UnitPOReceivingDetailOthers());
             } else return false; 
@@ -550,10 +549,10 @@ public class POReceiving implements GTransaction{
                 }else poDetail.get(fnRow).setValue(fsCol, 0);
                 break;
             case "xBarCodex":
-                setDetail(fnRow, 100, foData);
+                setDetail(fnRow, 9, foData);
                 break;
             case "xDescript":
-                setDetail(fnRow, 101, foData);
+                setDetail(fnRow, 10, foData);
                 break;
             default:
                 poDetail.get(fnRow).setValue(fsCol, foData);
@@ -574,9 +573,9 @@ public class POReceiving implements GTransaction{
     public Object getDetail(int fnRow, String fsCol){
         switch(fsCol){
             case "xBarCodex":
-                return getDetail(fnRow, 100);
+                return getDetail(fnRow, 9);
             case "xDescript":
-                return getDetail(fnRow, 101);
+                return getDetail(fnRow, 10);
             default:
                 return poDetail.get(fnRow).getValue(fsCol);
         }       
@@ -623,6 +622,11 @@ public class POReceiving implements GTransaction{
     }
     
     private boolean saveDetail(UnitPOReceivingMaster foData, boolean fbNewRecord) throws SQLException{
+        if (ItemCount() <= 0){
+            setMessage("No transaction detail detected.");
+            return false;
+        }
+        
         UnitPOReceivingDetail loOldDet;
         
         String lsSQL;
@@ -630,7 +634,33 @@ public class POReceiving implements GTransaction{
         int lnCtr;
         int lnRow = 0;
         
-        for (lnCtr = 0; lnCtr <= ItemCount() -1; lnCtr++){      
+        for (lnCtr = 0; lnCtr <= ItemCount() -1; lnCtr++){     
+            if (System.getProperty("store.inventory.strict.type").equals("0")){
+                if (poDetail.get(lnCtr).getStockID().equals("") &&
+                    !paDetailOthers.get(lnCtr).getValue(10).equals("")){
+
+                    //create inventory.
+                    Inventory loInv = new Inventory(poGRider, psBranchCd, true);
+                    loInv.NewRecord();
+
+                    if (paDetailOthers.get(lnCtr).getValue(9).equals(""))
+                        loInv.setMaster("sBarCodex", CommonUtils.getNextReference(poGRider.getConnection(), "Inventory", "sBarCodex", true));
+                    else
+                        loInv.setMaster("sBarCodex", paDetailOthers.get(lnCtr).getValue(9));
+
+                    loInv.setMaster("sDescript", paDetailOthers.get(lnCtr).getValue(10));
+                    loInv.setMaster("sInvTypCd", foData.getInvTypeCd());
+                    loInv.setMaster("nUnitPrce", poDetail.get(lnCtr).getUnitPrice());
+                    loInv.setMaster("nSelPrice", poDetail.get(lnCtr).getUnitPrice());
+                    if (!loInv.SaveRecord()){
+                        setMessage(loInv.getErrMsg() + "; " + loInv.getMessage());
+                        return false;
+                    }
+
+                    poDetail.get(lnCtr).setStockID((String) loInv.getMaster("sStockIDx"));
+                }
+            }
+            
             poDetail.get(lnCtr).setTransNox(foData.getTransNox());
             poDetail.get(lnCtr).setEntryNox(lnCtr + 1);
             poDetail.get(lnCtr).setDateModified(poGRider.getServerDate());
