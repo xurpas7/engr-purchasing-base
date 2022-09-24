@@ -19,7 +19,6 @@ import org.rmj.engr.inventory.base.InventoryTrans;
 import org.engr.purchasing.pojo.UnitPODetail;
 import org.engr.purchasing.pojo.UnitPOMaster;
 import org.engr.purchasing.pojo.UnitPOReceivingDetailOthers;
-import org.engr.purchasing.pojo.UnitPOReceivingMaster;
 
 public class PurchaseOrder implements GTransaction{
     @Override
